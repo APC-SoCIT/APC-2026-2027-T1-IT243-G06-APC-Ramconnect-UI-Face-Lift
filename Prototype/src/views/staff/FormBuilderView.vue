@@ -1,30 +1,32 @@
 <template>
-  <div class="flex min-h-screen bg-slate-100">
+  <div class="flex flex-col md:flex-row min-h-screen bg-slate-100">
     <StaffSidebar />
 
     <div class="flex-1 flex flex-col min-w-0">
-      <header class="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
-        <div>
-          <h1 class="text-xl font-bold text-slate-900">Admission Form Builder</h1>
-          <p class="text-xs text-slate-500">Dynamically configure intake sections and questions without writing code</p>
-        </div>
-        <div class="flex items-center space-x-3">
-          <button 
-            @click="addSection" 
-            class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold px-3.5 py-2 rounded-lg flex items-center space-x-1.5 transition-colors"
-          >
-            <Plus class="w-4 h-4" />
-            <span>Add Section</span>
-          </button>
-          <button 
-            @click="publishForm" 
-            :disabled="isSaving"
-            class="text-xs bg-apc-gold hover:bg-apc-goldDark text-apc-navy font-bold px-5 py-2 rounded-lg shadow-sm flex items-center space-x-1.5 transition-colors disabled:opacity-50"
-          >
-            <Save class="w-4 h-4" />
-            <span v-if="isSaving">Publishing...</span>
-            <span v-else>Save & Publish Changes</span>
-          </button>
+      <header class="bg-white border-b border-slate-200 px-4 sm:px-6 py-3.5 sm:py-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h1 class="text-base sm:text-xl font-bold text-slate-900">Admission Form Builder</h1>
+            <p class="text-[11px] sm:text-xs text-slate-500">Dynamically configure intake sections and questions without writing code</p>
+          </div>
+          <div class="flex items-center gap-2 flex-wrap self-start sm:self-auto">
+            <button 
+              @click="addSection" 
+              class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold px-3.5 py-2 rounded-lg flex items-center space-x-1.5 transition-colors"
+            >
+              <Plus class="w-4 h-4" />
+              <span>Add Section</span>
+            </button>
+            <button 
+              @click="publishForm" 
+              :disabled="isSaving"
+              class="text-xs bg-apc-gold hover:bg-apc-goldDark text-apc-navy font-bold px-4 py-2 rounded-lg shadow-sm flex items-center space-x-1.5 transition-colors disabled:opacity-50"
+            >
+              <Save class="w-4 h-4" />
+              <span v-if="isSaving">Publishing...</span>
+              <span v-else>Save & Publish</span>
+            </button>
+          </div>
         </div>
       </header>
 

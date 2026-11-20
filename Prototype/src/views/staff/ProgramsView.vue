@@ -1,13 +1,11 @@
 <template>
-  <div class="flex min-h-screen bg-slate-100">
+  <div class="flex flex-col md:flex-row min-h-screen bg-slate-100">
     <StaffSidebar />
 
     <div class="flex-1 flex flex-col min-w-0">
-      <header class="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
-        <div>
-          <h1 class="text-xl font-bold text-slate-900">Academic Programs & Quotas</h1>
-          <p class="text-xs text-slate-500">Manage degree slot quotas, active intake status, and career prospects</p>
-        </div>
+      <header class="bg-white border-b border-slate-200 px-4 sm:px-6 py-3.5 sm:py-4">
+        <h1 class="text-base sm:text-xl font-bold text-slate-900">Academic Programs & Quotas</h1>
+        <p class="text-[11px] sm:text-xs text-slate-500">Manage degree slot quotas, active intake status, and career prospects</p>
       </header>
 
       <main class="flex-1 p-6 space-y-6 overflow-y-auto max-w-5xl">
