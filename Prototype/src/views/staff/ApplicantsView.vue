@@ -1,20 +1,20 @@
 <template>
-  <div class="flex min-h-screen bg-slate-100">
+  <div class="flex flex-col md:flex-row min-h-screen bg-slate-100">
     <StaffSidebar />
 
     <div class="flex-1 flex flex-col min-w-0">
-      <header class="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
+      <header class="bg-white border-b border-slate-200 px-4 sm:px-6 py-3.5 sm:py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 class="text-xl font-bold text-slate-900">Applicant Dossier Evaluation</h1>
-          <p class="text-xs text-slate-500">Review student credentials, verify requirements, and transition qualification standing</p>
+          <h1 class="text-base sm:text-xl font-bold text-slate-900 leading-snug">Applicant Dossier Evaluation</h1>
+          <p class="text-[11px] sm:text-xs text-slate-500 mt-0.5">Review student credentials, verify requirements, and transition qualification standing</p>
         </div>
       </header>
 
-      <main class="flex-1 p-6 space-y-6 overflow-y-auto">
+      <main class="flex-1 p-3.5 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto">
         <!-- Search and Filter Bar -->
-        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div class="relative w-full sm:w-80">
-            <Search class="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
+        <div class="bg-white p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+          <div class="relative w-full md:w-80">
+            <Search class="w-4 h-4 absolute left-3.5 top-2.5 text-slate-400" />
             <input 
               type="text" 
               v-model="searchQuery" 
@@ -24,22 +24,65 @@
             />
           </div>
 
-          <div class="flex items-center space-x-1.5 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0">
+          <!-- Wrapped Filter Pills (zero horizontal scrollbar) -->
+          <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
             <button 
               v-for="st in ['All', 'Submitted', 'Under Review', 'Incomplete Dossier', 'Qualified', 'Enrolled']"
               :key="st"
               @click="activeStatus = st; loadApplicants()"
-              :class="activeStatus === st ? 'bg-apc-navy text-white font-bold' : 'bg-slate-50 text-slate-600 hover:bg-slate-100 font-medium'"
-              class="text-xs px-3 py-1.5 rounded-lg transition-colors shrink-0"
+              :class="activeStatus === st ? 'bg-apc-navy text-white font-bold shadow-sm' : 'bg-slate-50 text-slate-600 hover:bg-slate-100 font-medium border border-slate-200'"
+              class="text-xs px-2.5 sm:px-3 py-1.5 rounded-lg transition-colors"
             >
               {{ st }}
             </button>
           </div>
         </div>
 
-        <!-- Applicants Table -->
-        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-          <div class="overflow-x-auto">
+        <!-- Applicants Container -->
+        <div class="bg-white rounded-xl sm:rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <!-- Mobile Cards View (Visible on < sm) -->
+          <div class="sm:hidden divide-y divide-slate-100">
+            <div 
+              v-for="app in applicants" 
+              :key="'m-app-' + app.appform_id"
+              @click="openDossier(app)"
+              class="p-4 space-y-2.5 hover:bg-amber-50/40 active:bg-amber-100/50 cursor-pointer transition-colors"
+            >
+              <div class="flex items-center justify-between">
+                <span class="font-mono font-bold text-xs text-apc-navy bg-slate-100 px-2 py-0.5 rounded">
+                  {{ app.appform_id }}
+                </span>
+                <StatusBadge :status="app.status" />
+              </div>
+
+              <div>
+                <h4 class="font-bold text-sm text-slate-900">{{ app.first_name }} {{ app.last_name }}</h4>
+                <p class="text-xs text-slate-500">{{ app.email }} • {{ app.entry_status }}</p>
+              </div>
+
+              <div class="p-2.5 bg-slate-50 rounded-lg border border-slate-100 text-xs">
+                <span class="font-bold text-apc-navy block">{{ app.course_id }}</span>
+                <span class="text-[11px] text-slate-600 block truncate">{{ app.course_name }}</span>
+              </div>
+
+              <div class="flex items-center justify-between pt-1">
+                <span class="text-[11px] text-slate-400 truncate max-w-[180px]">{{ app.prev_school || 'School unlisted' }}</span>
+                <button 
+                  @click.stop="openDossier(app)"
+                  class="font-bold text-xs text-apc-navy hover:text-apc-goldDark bg-slate-100 px-3 py-1 rounded-md"
+                >
+                  Evaluate →
+                </button>
+              </div>
+            </div>
+
+            <div v-if="!applicants.length" class="p-8 text-center text-xs text-slate-400">
+              No applicants found matching this filter.
+            </div>
+          </div>
+
+          <!-- Desktop / Tablet Table View (Visible on sm+) -->
+          <div class="hidden sm:block overflow-x-auto">
             <table class="w-full text-left border-collapse text-xs">
               <thead>
                 <tr class="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">

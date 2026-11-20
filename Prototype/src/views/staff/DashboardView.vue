@@ -1,16 +1,16 @@
 <template>
-  <div class="flex min-h-screen bg-slate-100">
+  <div class="flex flex-col md:flex-row min-h-screen bg-slate-100">
     <StaffSidebar />
 
     <div class="flex-1 flex flex-col min-w-0">
       <!-- Top Bar -->
-      <header class="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
+      <header class="bg-white border-b border-slate-200 px-4 sm:px-6 py-3.5 sm:py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 class="text-xl font-bold text-slate-900">Inquiries CRM Dashboard</h1>
-          <p class="text-xs text-slate-500">Manage incoming prospective student inquiries, consultations, and CRM notes</p>
+          <h1 class="text-base sm:text-xl font-bold text-slate-900 leading-snug">Inquiries CRM Dashboard</h1>
+          <p class="text-[11px] sm:text-xs text-slate-500 mt-0.5">Manage incoming prospective student inquiries, consultations, and CRM notes</p>
         </div>
-        <div class="flex items-center space-x-3">
-          <router-link to="/inquire" target="_blank" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-3 py-1.5 rounded-lg flex items-center space-x-1">
+        <div class="flex items-center space-x-2 self-start sm:self-auto shrink-0">
+          <router-link to="/inquire" target="_blank" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-3 py-1.5 rounded-lg flex items-center space-x-1.5 transition-colors">
             <span>View Public Form</span>
             <ExternalLink class="w-3.5 h-3.5" />
           </router-link>
@@ -18,53 +18,92 @@
       </header>
 
       <!-- Main Body -->
-      <main class="flex-1 p-6 space-y-6 overflow-y-auto">
+      <main class="flex-1 p-3.5 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto">
         <!-- KPI Metrics Grid -->
-        <div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
-          <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-            <span class="text-[11px] text-slate-400 font-bold uppercase tracking-wider block">Total Inquiries</span>
-            <span class="text-2xl font-black text-slate-900 mt-1 block">{{ stats.total_inquiries }}</span>
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-4">
+          <div class="bg-white p-3 sm:p-4 rounded-xl border border-slate-200 shadow-sm">
+            <span class="text-[10px] sm:text-[11px] text-slate-400 font-bold uppercase tracking-wider block">Total Inquiries</span>
+            <span class="text-xl sm:text-2xl font-black text-slate-900 mt-0.5 sm:mt-1 block">{{ stats.total_inquiries }}</span>
           </div>
-          <div class="bg-white p-4 rounded-xl border border-amber-200 bg-amber-50/50 shadow-sm">
-            <span class="text-[11px] text-amber-800 font-bold uppercase tracking-wider block">New / Unhandled</span>
-            <span class="text-2xl font-black text-amber-900 mt-1 block">{{ stats.new_inquiries }}</span>
+          <div class="bg-white p-3 sm:p-4 rounded-xl border border-amber-200 bg-amber-50/50 shadow-sm">
+            <span class="text-[10px] sm:text-[11px] text-amber-800 font-bold uppercase tracking-wider block">New / Unhandled</span>
+            <span class="text-xl sm:text-2xl font-black text-amber-900 mt-0.5 sm:mt-1 block">{{ stats.new_inquiries }}</span>
           </div>
-          <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-            <span class="text-[11px] text-slate-400 font-bold uppercase tracking-wider block">Submitted Apps</span>
-            <span class="text-2xl font-black text-slate-900 mt-1 block">{{ stats.total_applications }}</span>
+          <div class="bg-white p-3 sm:p-4 rounded-xl border border-slate-200 shadow-sm">
+            <span class="text-[10px] sm:text-[11px] text-slate-400 font-bold uppercase tracking-wider block">Submitted Apps</span>
+            <span class="text-xl sm:text-2xl font-black text-slate-900 mt-0.5 sm:mt-1 block">{{ stats.total_applications }}</span>
           </div>
-          <div class="bg-white p-4 rounded-xl border border-emerald-200 bg-emerald-50/40 shadow-sm">
-            <span class="text-[11px] text-emerald-800 font-bold uppercase tracking-wider block">Qualified</span>
-            <span class="text-2xl font-black text-emerald-900 mt-1 block">{{ stats.qualified_applications }}</span>
+          <div class="bg-white p-3 sm:p-4 rounded-xl border border-emerald-200 bg-emerald-50/40 shadow-sm">
+            <span class="text-[10px] sm:text-[11px] text-emerald-800 font-bold uppercase tracking-wider block">Qualified</span>
+            <span class="text-xl sm:text-2xl font-black text-emerald-900 mt-0.5 sm:mt-1 block">{{ stats.qualified_applications }}</span>
           </div>
-          <div class="bg-white p-4 rounded-xl border border-purple-200 bg-purple-50/40 shadow-sm">
-            <span class="text-[11px] text-purple-800 font-bold uppercase tracking-wider block">Enrolled Paid</span>
-            <span class="text-2xl font-black text-purple-900 mt-1 block">{{ stats.enrolled_applications }}</span>
+          <div class="col-span-2 sm:col-span-1 bg-white p-3 sm:p-4 rounded-xl border border-purple-200 bg-purple-50/40 shadow-sm">
+            <span class="text-[10px] sm:text-[11px] text-purple-800 font-bold uppercase tracking-wider block">Enrolled Paid</span>
+            <span class="text-xl sm:text-2xl font-black text-purple-900 mt-0.5 sm:mt-1 block">{{ stats.enrolled_applications }}</span>
           </div>
         </div>
 
-        <!-- Filter Bar -->
-        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-4">
-          <div class="flex items-center space-x-1.5 overflow-x-auto pb-1 sm:pb-0">
+        <!-- Filter Bar (Wrapped naturally on mobile, zero scrollbar) -->
+        <div class="bg-white p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div class="flex flex-wrap items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
             <button 
               v-for="st in ['All', 'New', 'Contacted', 'Scheduled', 'Closed']"
               :key="st"
               @click="activeStatus = st; loadInquiries()"
-              :class="activeStatus === st ? 'bg-apc-navy text-white font-bold' : 'bg-slate-50 text-slate-600 hover:bg-slate-100 font-medium'"
-              class="text-xs px-3.5 py-1.5 rounded-lg transition-colors shrink-0"
+              :class="activeStatus === st ? 'bg-apc-navy text-white font-bold shadow-sm' : 'bg-slate-50 text-slate-600 hover:bg-slate-100 font-medium border border-slate-200'"
+              class="text-xs px-2.5 sm:px-3.5 py-1.5 rounded-lg transition-colors"
             >
               {{ st }}
             </button>
           </div>
 
-          <span class="text-xs text-slate-400 font-medium">
-            Showing {{ inquiries.length }} prospective inquiry tickets
+          <span class="text-[11px] sm:text-xs text-slate-400 font-medium">
+            Showing {{ inquiries.length }} tickets
           </span>
         </div>
 
-        <!-- Inquiries Table -->
-        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-          <div class="overflow-x-auto">
+        <!-- Inquiries Display Container -->
+        <div class="bg-white rounded-xl sm:rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <!-- Mobile Cards View (Visible on < sm) -->
+          <div class="sm:hidden divide-y divide-slate-100">
+            <div 
+              v-for="inq in inquiries" 
+              :key="'m-' + inq.inquiry_id"
+              @click="openInquiry(inq)"
+              class="p-4 space-y-2 hover:bg-amber-50/40 active:bg-amber-100/50 cursor-pointer transition-colors"
+            >
+              <div class="flex items-center justify-between">
+                <span class="font-mono font-bold text-xs text-apc-navy bg-slate-100 px-2 py-0.5 rounded">
+                  {{ inq.inquiry_id }}
+                </span>
+                <StatusBadge :status="inq.status" />
+              </div>
+
+              <div>
+                <h4 class="font-bold text-sm text-slate-900">{{ inq.first_name }} {{ inq.last_name }}</h4>
+                <p class="text-xs text-slate-500">{{ inq.email }} • {{ inq.mobile }}</p>
+              </div>
+
+              <div class="flex items-center justify-between pt-1 text-xs">
+                <span class="font-semibold text-apc-navy bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                  {{ inq.program_interest || 'General Admissions' }}
+                </span>
+                <button 
+                  @click.stop="openInquiry(inq)"
+                  class="font-bold text-xs text-apc-navy hover:text-apc-goldDark bg-slate-100 px-3 py-1 rounded-md"
+                >
+                  Open CRM →
+                </button>
+              </div>
+            </div>
+
+            <div v-if="!inquiries.length" class="p-8 text-center text-xs text-slate-400">
+              No inquiries found matching this filter.
+            </div>
+          </div>
+
+          <!-- Desktop / Tablet Table View (Visible on sm+) -->
+          <div class="hidden sm:block overflow-x-auto">
             <table class="w-full text-left border-collapse text-xs">
               <thead>
                 <tr class="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
