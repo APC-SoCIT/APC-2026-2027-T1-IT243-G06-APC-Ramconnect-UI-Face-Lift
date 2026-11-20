@@ -1,0 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --apc-gold: #FDB813;
+  --apc-navy: #0B1E3D;
+  --apc-accent: #16284F;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background-color: #F8F9FA;
+  color: #1E293B;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* APC Background & Gradient styling */
+.apc-navy-gradient {
+  background: radial-gradient(circle at 85% 15%, rgba(253, 184, 19, 0.12) 0%, transparent 40%),
+              linear-gradient(135deg, #09152A 0%, #0B1E3D 55%, #142850 100%);
+}
+
+.apc-gold-gradient {
+  background: linear-gradient(135deg, #FDB813 0%, #E5A307 100%);
+}
+
+.apc-card-shadow {
+  box-shadow: 0 10px 30px -5px rgba(11, 30, 61, 0.08), 0 4px 12px -2px rgba(11, 30, 61, 0.04);
+}
+
+/* Scrollbar styles */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #F1F5F9;
+}
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}

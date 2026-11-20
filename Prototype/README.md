@@ -1,62 +1,88 @@
-# Base44 Project
+# APC RamConnect - Modern Online Admissions System
 
-Use this repository to run and edit the app locally, then publish changes back through Base44.
+Modern, mobile-responsive web-based admissions platform for **Asia Pacific College (APC)**. Built with a decoupled component architecture using **Vue.js 3** on the frontend, **Python FastAPI** on the backend, **Supabase** for database management, and configured for seamless deployment on **Vercel**.
 
-Any change pushed to the repo will also be reflected in the Base44 Builder.
+---
 
-## Prerequisites
+## 🚀 Tech Stack
 
-1. Clone the repository using the project's Git URL.
-2. Navigate to the project directory.
-3. Install dependencies: `npm install`.
-4. Install the Base44 CLI: `npm install -g base44@latest`.
-5. Install [Deno](https://docs.deno.com/runtime/getting_started/installation/) — the local Base44 backend runs on it.
+* **Frontend:** Vue.js 3 (Composition API), Vite, Tailwind CSS, Pinia, Lucide Icons
+* **Backend:** Python 3.11+, FastAPI, Pydantic v2, Uvicorn
+* **Database & Auth:** Supabase (PostgreSQL with RLS), REST API & Fallback Store
+* **Deployment:** Vercel (Vue SPA + Serverless Python Function via `vercel.json`)
 
-Run `base44 --help` (or see the [CLI reference](https://docs.base44.com/developers/references/cli/commands/introduction)) for the full command surface.
+---
 
-## Run Locally
+## 📁 Project Architecture
 
-Three commands, from the project root:
-
-```bash
-base44 login   # one-time per machine
-base44 link    # one-time per clone
-base44 dev     # local backend + frontend together
+```text
+Prototype/
+├── api/                       # Python FastAPI Backend (Vercel Serverless Function)
+│   ├── index.py               # Main FastAPI app & CORS configuration
+│   ├── config.py              # Supabase & JWT settings
+│   ├── database.py            # Supabase connection & in-memory fallback
+│   ├── schemas.py             # Pydantic validation schemas
+│   ├── routers/               # Auth, Public CMS, Inquiries, Applications, Staff
+│   └── requirements.txt       # Python dependencies
+├── src/                       # Vue.js 3 Frontend
+│   ├── components/            # CoursePicker, DynamicFormRenderer, PaymentModal, CRM Drawers
+│   ├── views/                 # Home, Inquire, Apply, Portal, Login, Register, Staff Hub
+│   ├── router/                # Vue Router with RBAC guards
+│   ├── stores/                # Pinia state stores (auth, siteSettings)
+│   ├── api/client.js          # Unified API client
+│   └── style.css              # APC Brand styling (#FDB813 Gold, #0B1E3D Navy)
+├── supabase/
+│   ├── schema.sql             # Complete PostgreSQL schema (tables, constraints, indexes)
+│   └── seed.sql               # Seed data for APC degree programs, form sections, and demo users
+├── package.json               # NPM scripts and frontend dependencies
+├── vite.config.js             # Vite config with API proxy
+├── tailwind.config.js         # APC official brand color palette
+└── vercel.json                # Vercel deployment configuration
 ```
 
-Open the frontend URL that `base44 dev` prints (typically `http://localhost:5173`).
+---
 
-Notes:
+## 🛠️ Quick Start & Local Development
 
-- **Every fresh clone needs `base44 link`.** It writes `base44/.app.jsonc` (the app-id pointer), which is deliberately gitignored. Your app id is in the Builder URL (`app.base44.com/apps/<id>/...`); `base44 link --help` shows the non-interactive flags.
-- **`base44 dev` runs the frontend for you** (via `site.serveCommand` in this repo's `base44/config.jsonc`) — never run `npm run dev` yourself: alone it serves a UI with no backend behind it (`[base44] Proxy not enabled`, every `/api` call fails), and alongside `base44 dev` the second Vite silently takes the next port and you end up looking at the wrong one.
-- **The app must be published at least once for the UI to load under `base44 dev`.** The frontend boots by fetching app settings from the hosted app; before the first publish that fails and every page redirects to login. The local API works regardless.
-- Entities, functions, and auth run locally — entity data is **in-memory only**, wiped when `base44 dev` restarts. Everything else (Core integrations, OAuth login) is forwarded to your deployed app. Full breakdown: [Local development overview](https://docs.base44.com/developers/backend/overview/local-dev/local-development-overview).
-
-## Frontend Only, Hosted Backend
-
-To work on just the frontend against your app's live hosted backend:
-
+### 1. Frontend Setup
+From the `Prototype` directory:
 ```bash
-base44 dev --remote
+# Install dependencies
+npm install
+
+# Start Vite development server (http://localhost:5173)
+npm run dev
 ```
 
-⚠️ In this mode writes go to your app's **production data** — plain `base44 dev` keeps everything local.
-
-## Publish Your Changes
-
-After pushing your changes to git, open the Base44 dashboard and publish the app:
-
+### 2. Backend Setup (Optional for API testing)
 ```bash
-base44 dashboard open
+# Install Python packages
+pip install -r api/requirements.txt
+
+# Start FastAPI server (http://localhost:8000)
+uvicorn api.index:app --reload --port 8000
 ```
+*Note: The frontend includes seamless fallback data persistence so you can test all views, forms, payment simulation, and staff CRM functions even without running the Python backend locally.*
 
-This repo syncs to Base44 through git, so publish from the dashboard rather than `base44 deploy` — a CLI deploy ships your local tree directly, bypassing the sync, and the deployed state silently diverges from the repo.
+---
 
-## Docs & Support
+## 🔑 Demo Access Credentials
 
-GitHub integration: [https://docs.base44.com/developers/app-code/local-development/github](https://docs.base44.com/developers/app-code/local-development/github)
+| User Role | Email | Password | Target Interface |
+| :--- | :--- | :--- | :--- |
+| **Admissions Staff** | `admissions@apc.edu.ph` | `admin123` | `/staff` (CRM, Dossiers, Form Builder, CMS) |
+| **Prospective Applicant** | `applicant@gmail.com` | `user123` | `/portal` (Status Stepper & Online Reservation) |
 
-Local development: [https://docs.base44.com/developers/backend/overview/local-dev/local-development-overview](https://docs.base44.com/developers/backend/overview/local-dev/local-development-overview)
+*(Quick-fill buttons are also provided directly on the `/login` screen).*
 
-Support: [https://app.base44.com/support](https://app.base44.com/support)
+---
+
+## ☁️ Vercel Deployment
+
+1. Push your repository to GitHub on branch `Prototype-Remake`.
+2. Connect the repository to your [Vercel Dashboard](https://vercel.com).
+3. Set the Root Directory in Vercel to `Prototype`.
+4. (Optional) Set the following environment variables in Vercel:
+   * `SUPABASE_URL`: Your Supabase Project URL
+   * `SUPABASE_KEY`: Your Supabase Anon or Service Role Key
+5. Click **Deploy**. Vercel will automatically build the Vue.js frontend and route `/api/*` to the Python FastAPI backend.
