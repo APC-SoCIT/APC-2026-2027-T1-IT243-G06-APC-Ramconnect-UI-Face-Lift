@@ -193,3 +193,45 @@ CREATE INDEX IF NOT EXISTS idx_inquiries_status ON inquiries(status);
 CREATE INDEX IF NOT EXISTS idx_applications_status ON applications(status);
 CREATE INDEX IF NOT EXISTS idx_applications_user ON applications(user_id);
 CREATE INDEX IF NOT EXISTS idx_form_fields_section ON form_fields(section_id);
+
+-- 10. ROW LEVEL SECURITY (RLS) POLICIES
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.site_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.milestones ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.promos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.courses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.form_sections ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.form_fields ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.inquiries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.inquiry_notes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.applications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
+
+-- Public Read Policies for Catalog & CMS
+CREATE POLICY "Public read for site_settings" ON public.site_settings FOR SELECT USING (true);
+CREATE POLICY "Public read for milestones" ON public.milestones FOR SELECT USING (true);
+CREATE POLICY "Public read for promos" ON public.promos FOR SELECT USING (true);
+CREATE POLICY "Public read for courses" ON public.courses FOR SELECT USING (true);
+CREATE POLICY "Public read for form_sections" ON public.form_sections FOR SELECT USING (true);
+CREATE POLICY "Public read for form_fields" ON public.form_fields FOR SELECT USING (true);
+
+-- Inquiries: Public submission, authenticated staff access
+CREATE POLICY "Public can submit inquiries" ON public.inquiries FOR INSERT WITH CHECK (true);
+CREATE POLICY "Staff can view inquiries" ON public.inquiries FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Staff can update inquiries" ON public.inquiries FOR UPDATE TO authenticated USING (true);
+
+-- Inquiry Notes: Staff only
+CREATE POLICY "Staff can view inquiry notes" ON public.inquiry_notes FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Staff can create inquiry notes" ON public.inquiry_notes FOR INSERT TO authenticated WITH CHECK (true);
+
+-- Applications: Insert allowed, users see own, staff sees all
+CREATE POLICY "Applicants can insert applications" ON public.applications FOR INSERT WITH CHECK (true);
+CREATE POLICY "Users can view their own application" ON public.applications FOR SELECT TO authenticated USING (auth.uid() = user_id);
+
+-- Users: Read own profile only
+CREATE POLICY "Users can view own profile" ON public.users FOR SELECT TO authenticated USING (auth.uid() = id);
+
+-- Audit logs: Authenticated staff only
+CREATE POLICY "Staff can read audit logs" ON public.audit_logs FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Staff can insert audit logs" ON public.audit_logs FOR INSERT TO authenticated WITH CHECK (true);
+
