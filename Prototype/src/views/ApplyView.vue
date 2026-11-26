@@ -60,21 +60,36 @@
           :model="formData" 
         />
 
-        <!-- Error Message If Incomplete -->
-        <div v-if="validationError" class="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold flex items-center space-x-2">
-          <AlertCircle class="w-4 h-4 shrink-0" />
-          <span>{{ validationError }}</span>
+        <!-- Error Message If Incomplete or Duplicate -->
+        <div
+          v-if="validationError"
+          ref="errorSummaryRef"
+          tabindex="-1"
+          role="alert"
+          class="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold flex flex-wrap items-center justify-between gap-2 outline-none"
+        >
+          <div class="flex items-center space-x-2">
+            <AlertCircle class="w-4 h-4 shrink-0" />
+            <span>{{ validationError }}</span>
+          </div>
+          <router-link
+            v-if="isDuplicateEmail"
+            to="/login"
+            class="bg-rose-700 hover:bg-rose-800 text-white px-3 py-1.5 rounded-lg text-[11px] font-bold transition-colors"
+          >
+            Go to Log In →
+          </router-link>
         </div>
 
         <!-- Submission Action -->
         <div class="bg-white rounded-2xl p-6 border border-slate-200 apc-card-shadow flex flex-col sm:flex-row items-center justify-between gap-4">
           <div>
             <h4 class="font-bold text-slate-900 text-xs sm:text-sm">Ready to Register Dossier?</h4>
-            <p class="text-[11px] text-slate-500">You will be redirected to your personal dashboard to track evaluation standing.</p>
+            <p class="text-[11px] text-slate-500">Your applicant account will be created automatically using your birth year and redirected to your dashboard.</p>
           </div>
           <button 
             type="submit" 
-            :disabled="isSubmitting || !consentGiven"
+            :disabled="isSubmitting"
             class="w-full sm:w-auto bg-apc-navy hover:bg-apc-navyLight text-white font-bold text-xs px-8 py-3.5 rounded-xl shadow-lg transition-all flex items-center justify-center space-x-2 disabled:opacity-50"
           >
             <span v-if="isSubmitting">Submitting Application...</span>
@@ -90,7 +105,7 @@
 </template>
 
 <script setup>
-import { reactive, ref, onMounted } from 'vue';
+import { reactive, ref, nextTick, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useSiteSettingsStore } from '../stores/siteSettings';
 import { useAuthStore } from '../stores/auth';
@@ -109,6 +124,8 @@ const selectedCourseId = ref('BSCS');
 const consentGiven = ref(true);
 const isSubmitting = ref(false);
 const validationError = ref('');
+const isDuplicateEmail = ref(false);
+const errorSummaryRef = ref(null);
 
 const formData = reactive({
   acad_term: 'AY 2026-2027, Term 1',
@@ -117,7 +134,7 @@ const formData = reactive({
   first_name: '',
   middle_name: '',
   last_name: '',
-  birth_date: '2007-01-01',
+  birth_date: '',
   sex: 'Male',
   nationality: 'Filipino',
   email: '',
@@ -131,29 +148,33 @@ const formData = reactive({
 
 onMounted(async () => {
   await siteStore.fetchAll();
-  if (authStore.user) {
-    formData.email = authStore.user.email || '';
-    if (authStore.user.full_name) {
-      const parts = authStore.user.full_name.split(' ');
-      formData.first_name = parts[0] || '';
-      formData.last_name = parts.slice(1).join(' ') || '';
-    }
+  if (authStore.isApplicant) {
+    router.replace({ name: 'portal' });
   }
 });
 
+async function showError(msg, duplicate = false) {
+  validationError.value = msg;
+  isDuplicateEmail.value = duplicate;
+  await nextTick();
+  errorSummaryRef.value?.focus();
+}
+
 async function handleSubmit() {
   validationError.value = '';
+  isDuplicateEmail.value = false;
+
   if (!selectedCourseId.value) {
-    validationError.value = 'Please select your target degree program above.';
-    return;
+    return showError('Please select your target degree program above.');
   }
-  if (!formData.first_name || !formData.last_name || !formData.email || !formData.mobile) {
-    validationError.value = 'Please fill out all required name, email, and contact fields.';
-    return;
+  if (!formData.first_name.trim() || !formData.last_name.trim() || !formData.email.trim() || !formData.mobile.trim()) {
+    return showError('Please fill out all required name, email, and contact fields.');
+  }
+  if (!formData.birth_date || !/\d{4}/.test(formData.birth_date)) {
+    return showError('Please provide your valid Date of Birth.');
   }
   if (!consentGiven.value) {
-    validationError.value = 'Please confirm the Data Privacy consent before proceeding.';
-    return;
+    return showError('Please confirm the Data Privacy consent before proceeding.');
   }
 
   isSubmitting.value = true;
@@ -165,16 +186,25 @@ async function handleSubmit() {
     };
 
     const res = await api.createApplication(payload);
-    
-    // Auto-login applicant if not logged in
-    if (!authStore.isAuthenticated) {
-      authStore.login(formData.email, 'user123');
+
+    if (res.user) {
+      authStore.setSession(res.user);
+    }
+    if (res.default_password) {
+      sessionStorage.setItem('apc_new_applicant_creds', JSON.stringify({
+        email: res.user?.email || formData.email,
+        password: res.default_password
+      }));
     }
 
     router.push({ name: 'portal', query: { app_id: res.appform_id } });
   } catch (e) {
     console.error(e);
-    validationError.value = 'Failed to submit application. Please verify your details.';
+    if (e.status === 409) {
+      await showError(e.message || 'An account with this email already exists.', true);
+    } else {
+      await showError(e.message || 'Failed to submit application. Please verify your details.');
+    }
   } finally {
     isSubmitting.value = false;
   }

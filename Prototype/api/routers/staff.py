@@ -1,17 +1,31 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException
 from typing import List, Dict, Any, Optional
-from ..schemas import ApplicationUpdateStatus, SiteSettingsSchema, FormSectionSchema, CourseSchema
-from ..database import DB
+from ..schemas import ApplicationUpdateStatus, SiteSettingsSchema
+from ..database import DB, get_supabase_db
 
 router = APIRouter(prefix="/staff", tags=["Staff Management"])
+
+
+def _fetch_all_applications() -> List[Dict[str, Any]]:
+    client = get_supabase_db()
+    if client:
+        try:
+            res = client.table("applications").select("*").order("created_at", desc=True).execute()
+            if res.data is not None and len(res.data) > 0:
+                return res.data
+        except Exception:
+            pass
+    return DB["applications"]
+
 
 @router.get("/stats")
 def get_dashboard_stats():
     total_inquiries = len(DB["inquiries"])
     new_inquiries = len([i for i in DB["inquiries"] if i.get("status") == "New"])
-    total_apps = len(DB["applications"])
-    qualified_apps = len([a for a in DB["applications"] if a.get("status") == "Qualified"])
-    enrolled_apps = len([a for a in DB["applications"] if a.get("status") == "Enrolled"])
+    apps = _fetch_all_applications()
+    total_apps = len(apps)
+    qualified_apps = len([a for a in apps if a.get("status") == "Qualified"])
+    enrolled_apps = len([a for a in apps if a.get("status") == "Enrolled"])
     return {
         "total_inquiries": total_inquiries,
         "new_inquiries": new_inquiries,
@@ -20,9 +34,10 @@ def get_dashboard_stats():
         "enrolled_applications": enrolled_apps
     }
 
+
 @router.get("/applicants")
 def list_applicants(query: Optional[str] = None, status: Optional[str] = None):
-    results = DB["applications"]
+    results = _fetch_all_applications()
     if status and status != "All":
         results = [a for a in results if a.get("status") == status]
     if query:
@@ -37,14 +52,32 @@ def list_applicants(query: Optional[str] = None, status: Optional[str] = None):
         ]
     return results
 
+
 @router.patch("/applicants/{app_id}/status")
 def update_applicant_status(app_id: str, req: ApplicationUpdateStatus):
+    updated = None
     for a in DB["applications"]:
         if a["appform_id"] == app_id:
             a["status"] = req.status
             if req.officer_notes:
                 a["officer_notes"] = req.officer_notes
-            return {"message": "Status updated successfully", "application": a}
+            updated = a
+            break
+
+    client = get_supabase_db()
+    if client:
+        try:
+            payload = {"status": req.status}
+            if req.officer_notes:
+                payload["officer_notes"] = req.officer_notes
+            res = client.table("applications").update(payload).eq("appform_id", app_id).execute()
+            if res.data:
+                updated = res.data[0]
+        except Exception:
+            pass
+
+    if updated:
+        return {"message": "Status updated successfully", "application": updated}
     raise HTTPException(status_code=404, detail="Application not found")
 
 @router.put("/settings")

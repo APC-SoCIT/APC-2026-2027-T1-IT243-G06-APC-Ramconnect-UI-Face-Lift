@@ -281,6 +281,21 @@ function saveStore(key, value) {
   } catch (e) {}
 }
 
+function authHeaders(json = true) {
+  const headers = {};
+  if (json) headers['Content-Type'] = 'application/json';
+  const token = localStorage.getItem('apc_ramconnect_token');
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  return headers;
+}
+
+async function parseApiError(res, fallbackMsg) {
+  const data = await res.json().catch(() => ({}));
+  const err = new Error(data.detail || fallbackMsg);
+  err.status = res.status;
+  return err;
+}
+
 export const api = {
   // --- Public CMS Data ---
   async getSettings() {
@@ -406,16 +421,27 @@ export const api = {
     try {
       const res = await fetch('/api/applications', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(),
         body: JSON.stringify(payload)
       });
       if (res.ok) return await res.json();
-    } catch (e) {}
+      throw await parseApiError(res, 'Failed to submit application.');
+    } catch (e) {
+      if (!(e instanceof TypeError)) throw e;
+    }
 
+    // Offline fallback
     const apps = loadStore(STORAGE_KEYS.APPLICATIONS, DEFAULT_APPLICATIONS);
+    if (apps.some(a => a.email?.toLowerCase() === payload.email?.toLowerCase())) {
+      const err = new Error('An account with this email already exists. Please log in instead.');
+      err.status = 409;
+      throw err;
+    }
     const courses = loadStore(STORAGE_KEYS.COURSES, DEFAULT_COURSES);
     const course = courses.find(c => c.id === payload.course_id);
     const appId = "APP-2026-" + Math.floor(1000 + Math.random() * 9000);
+    const birthYear = (payload.birth_date || '').match(/\d{4}/)?.[0] || '';
+    const defaultPassword = `${payload.first_name || ''}${payload.last_name || ''}`.replace(/\s+/g, '').toLowerCase() + birthYear;
     const newApp = {
       appform_id: appId,
       course_name: course ? course.name : payload.course_id,
@@ -427,32 +453,48 @@ export const api = {
     };
     apps.unshift(newApp);
     saveStore(STORAGE_KEYS.APPLICATIONS, apps);
-    return { message: "Application submitted successfully.", appform_id: appId, application: newApp };
+    return {
+      message: "Application submitted successfully.",
+      appform_id: appId,
+      application: newApp,
+      default_password: defaultPassword,
+      user: {
+        id: 'u-' + Math.random().toString(36).substring(2, 9),
+        email: payload.email,
+        full_name: `${payload.first_name} ${payload.last_name}`.trim(),
+        role: 'applicant',
+        token: 'mock_token_applicant'
+      }
+    };
   },
 
   async getMyApplication(email) {
     try {
       const url = email ? `/api/applications/my?email=${encodeURIComponent(email)}` : '/api/applications/my';
-      const res = await fetch(url);
+      const res = await fetch(url, { headers: authHeaders(false) });
       if (res.ok) return await res.json();
-    } catch (e) {}
-    const apps = loadStore(STORAGE_KEYS.APPLICATIONS, DEFAULT_APPLICATIONS);
-    if (email) {
-      const matched = apps.find(a => a.email.toLowerCase() === email.toLowerCase());
-      if (matched) return matched;
+      if (res.status === 404 || res.status === 400) return null;
+      throw await parseApiError(res, 'Failed to load application.');
+    } catch (e) {
+      if (!(e instanceof TypeError)) throw e;
     }
-    return apps[0] || null;
+    if (!email) return null;
+    const apps = loadStore(STORAGE_KEYS.APPLICATIONS, DEFAULT_APPLICATIONS);
+    return apps.find(a => a.email?.toLowerCase() === email.toLowerCase()) || null;
   },
 
   async payReservationFee(appId, paymentPayload) {
     try {
       const res = await fetch(`/api/applications/${appId}/pay`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(),
         body: JSON.stringify(paymentPayload)
       });
       if (res.ok) return await res.json();
-    } catch (e) {}
+      throw await parseApiError(res, 'Payment verification failed.');
+    } catch (e) {
+      if (!(e instanceof TypeError)) throw e;
+    }
 
     const apps = loadStore(STORAGE_KEYS.APPLICATIONS, DEFAULT_APPLICATIONS);
     const app = apps.find(a => a.appform_id === appId);
@@ -480,9 +522,14 @@ export const api = {
   // --- Staff Management ---
   async getApplicants(query = '', status = 'All') {
     try {
-      const res = await fetch(`/api/staff/applicants?query=${encodeURIComponent(query)}&status=${encodeURIComponent(status)}`);
+      const res = await fetch(`/api/staff/applicants?query=${encodeURIComponent(query)}&status=${encodeURIComponent(status)}`, {
+        headers: authHeaders(false)
+      });
       if (res.ok) return await res.json();
-    } catch (e) {}
+      throw await parseApiError(res, 'Failed to load applicants.');
+    } catch (e) {
+      if (!(e instanceof TypeError)) throw e;
+    }
     let list = loadStore(STORAGE_KEYS.APPLICATIONS, DEFAULT_APPLICATIONS);
     if (status !== 'All') {
       list = list.filter(a => a.status === status);
@@ -503,11 +550,14 @@ export const api = {
     try {
       const res = await fetch(`/api/staff/applicants/${appId}/status`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(),
         body: JSON.stringify({ status, officer_notes })
       });
       if (res.ok) return await res.json();
-    } catch (e) {}
+      throw await parseApiError(res, 'Failed to update applicant status.');
+    } catch (e) {
+      if (!(e instanceof TypeError)) throw e;
+    }
     const apps = loadStore(STORAGE_KEYS.APPLICATIONS, DEFAULT_APPLICATIONS);
     const app = apps.find(a => a.appform_id === appId);
     if (app) {

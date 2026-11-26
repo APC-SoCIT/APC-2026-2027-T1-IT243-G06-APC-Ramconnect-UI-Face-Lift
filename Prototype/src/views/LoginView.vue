@@ -9,37 +9,26 @@
           <div class="w-12 h-12 rounded-full bg-apc-navy border-2 border-apc-gold text-apc-gold flex items-center justify-center font-black mx-auto shadow">
             APC
           </div>
-          <h2 class="text-2xl font-bold text-slate-900">Sign In to RamConnect</h2>
-          <p class="text-xs text-slate-500">Access your applicant portal or staff management dashboard</p>
-        </div>
-
-        <!-- Quick Demo Switcher -->
-        <div class="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs space-y-2">
-          <span class="font-bold text-amber-950 block text-[11px] uppercase tracking-wider">Quick Fill Demo Accounts:</span>
-          <div class="flex items-center gap-2">
-            <button 
-              type="button" 
-              @click="fillDemo('applicant')" 
-              class="flex-1 bg-white hover:bg-amber-100 text-amber-900 border border-amber-300 font-semibold py-1.5 px-2.5 rounded-lg text-center transition-colors"
-            >
-              Applicant
-            </button>
-            <button 
-              type="button" 
-              @click="fillDemo('staff')" 
-              class="flex-1 bg-apc-navy hover:bg-apc-navyLight text-white font-semibold py-1.5 px-2.5 rounded-lg text-center transition-colors"
-            >
-              Admissions Staff
-            </button>
-          </div>
+          <h2 class="text-2xl font-bold text-slate-900">
+            {{ isApplicantOnly ? 'Applicant Portal Sign In' : (isStaffOnly ? 'Admissions Staff Sign In' : 'Sign In to RamConnect') }}
+          </h2>
+          <p class="text-xs text-slate-500">
+            {{ isApplicantOnly ? 'Sign in with your registered applicant email to track your application status' : 'Access your applicant portal or staff management dashboard' }}
+          </p>
         </div>
 
         <form @submit.prevent="handleLogin" class="space-y-4">
           <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1">Email Address</label>
+            <label for="login-email" class="block text-xs font-bold text-slate-700 mb-1">Email Address</label>
             <input 
+              id="login-email"
+              name="email"
               type="email" 
               v-model="email" 
+              autocomplete="username"
+              autocorrect="off"
+              autocapitalize="none"
+              spellcheck="false"
               required 
               placeholder="e.g. applicant@gmail.com" 
               class="w-full text-xs bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-slate-900 focus:bg-white focus:ring-2 focus:ring-apc-gold outline-none"
@@ -47,17 +36,32 @@
           </div>
 
           <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1">Password</label>
-            <input 
-              type="password" 
-              v-model="password" 
-              required 
-              placeholder="••••••••" 
-              class="w-full text-xs bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-slate-900 focus:bg-white focus:ring-2 focus:ring-apc-gold outline-none"
-            />
+            <label for="login-password" class="block text-xs font-bold text-slate-700 mb-1">Password</label>
+            <div class="relative">
+              <input 
+                id="login-password"
+                name="password"
+                :type="showPassword ? 'text' : 'password'" 
+                v-model="password" 
+                autocomplete="current-password"
+                required 
+                placeholder="••••••••" 
+                class="w-full text-xs bg-slate-50 border border-slate-300 rounded-lg pl-3.5 pr-10 py-2.5 text-slate-900 focus:bg-white focus:ring-2 focus:ring-apc-gold outline-none"
+              />
+              <button
+                type="button"
+                @click="showPassword = !showPassword"
+                :aria-pressed="showPassword"
+                :aria-label="showPassword ? 'Hide password' : 'Show password'"
+                class="absolute inset-y-0 right-0 px-3 flex items-center text-slate-500 hover:text-slate-800"
+              >
+                <EyeOff v-if="showPassword" class="w-4 h-4" />
+                <Eye v-else class="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
-          <div v-if="errorMessage" class="p-3 bg-rose-50 border border-rose-200 rounded-lg text-rose-800 text-xs font-semibold">
+          <div v-if="errorMessage" role="alert" class="p-3 bg-rose-50 border border-rose-200 rounded-lg text-rose-800 text-xs font-semibold">
             {{ errorMessage }}
           </div>
 
@@ -73,7 +77,7 @@
 
         <div class="pt-4 border-t border-slate-100 text-center text-xs text-slate-500">
           New applicant? 
-          <router-link to="/register" class="text-apc-navy font-bold hover:underline">Create an Account</router-link>
+          <router-link to="/apply" class="text-apc-navy font-bold hover:underline">Start an Application</router-link>
         </div>
       </div>
     </main>
@@ -83,11 +87,12 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 import Navbar from '../components/common/Navbar.vue';
 import Footer from '../components/common/Footer.vue';
+import { Eye, EyeOff } from 'lucide-vue-next';
 
 const authStore = useAuthStore();
 const router = useRouter();
@@ -95,24 +100,21 @@ const route = useRoute();
 
 const email = ref('');
 const password = ref('');
+const showPassword = ref(false);
 const errorMessage = ref('');
 const isSubmitting = ref(false);
 
-function fillDemo(type) {
-  if (type === 'staff') {
-    email.value = 'admissions@apc.edu.ph';
-    password.value = 'admin123';
-  } else {
-    email.value = 'applicant@gmail.com';
-    password.value = 'user123';
-  }
-}
+const isApplicantOnly = computed(() => String(route.query.redirect || '').startsWith('/portal'));
+const isStaffOnly = computed(() => String(route.query.redirect || '').startsWith('/staff'));
 
 async function handleLogin() {
   errorMessage.value = '';
   isSubmitting.value = true;
   try {
-    const user = await authStore.login(email.value, password.value);
+    await authStore.login(email.value, password.value, {
+      disallowStaff: isApplicantOnly.value,
+      requireStaff: isStaffOnly.value
+    });
     const redirect = route.query.redirect;
     if (redirect) {
       router.push(redirect);

@@ -73,12 +73,12 @@
 
               <!-- Apply Now -->
               <router-link 
-                to="/apply"
+                :to="authStore.isApplicant ? '/portal' : '/apply'"
                 class="w-full flex items-center justify-between bg-apc-navy hover:bg-apc-navyLight text-white font-bold text-sm px-5 py-3.5 rounded-xl shadow-md transition-transform hover:-translate-y-0.5"
               >
                 <div class="text-left">
-                  <div class="text-xs text-slate-300 uppercase font-semibold">Ready to Register?</div>
-                  <div class="font-extrabold">Apply for AY 2026–2027</div>
+                  <div class="text-xs text-slate-300 uppercase font-semibold">{{ authStore.isApplicant ? 'Application Active' : 'Ready to Register?' }}</div>
+                  <div class="font-extrabold">{{ authStore.isApplicant ? 'Go to My Dashboard' : 'Apply for AY 2026–2027' }}</div>
                 </div>
                 <ArrowRight class="w-5 h-5 text-apc-gold" />
               </router-link>
@@ -242,11 +242,13 @@
 <script setup>
 import { onMounted } from 'vue';
 import { useSiteSettingsStore } from '../stores/siteSettings';
+import { useAuthStore } from '../stores/auth';
 import Navbar from '../components/common/Navbar.vue';
 import Footer from '../components/common/Footer.vue';
 import { Sparkles, ArrowRight, UserCheck, Calendar, ChevronRight, Check, X } from 'lucide-vue-next';
 
 const siteStore = useSiteSettingsStore();
+const authStore = useAuthStore();
 
 onMounted(() => {
   siteStore.fetchAll();

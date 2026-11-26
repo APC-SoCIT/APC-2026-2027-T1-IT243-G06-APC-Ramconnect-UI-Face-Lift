@@ -24,7 +24,7 @@
           :class="field.field_width === 'full' ? 'sm:col-span-2' : 'sm:col-span-1'"
           class="space-y-1.5"
         >
-          <label class="block text-xs font-bold text-slate-700">
+          <label :for="`field-${field.field_key}`" class="block text-xs font-bold text-slate-700">
             {{ field.label }}
             <span v-if="field.field_required" class="text-rose-600">*</span>
           </label>
@@ -32,6 +32,8 @@
           <!-- Select Field -->
           <div v-if="field.field_type === 'select'" class="relative">
             <select
+              :id="`field-${field.field_key}`"
+              :name="field.field_key"
               v-model="model[field.field_key]"
               :required="field.field_required"
               class="w-full text-xs bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-slate-900 focus:bg-white focus:ring-2 focus:ring-apc-gold focus:border-apc-gold outline-none transition-all"
@@ -50,8 +52,11 @@
           <!-- Date Field -->
           <input
             v-else-if="field.field_type === 'date'"
+            :id="`field-${field.field_key}`"
+            :name="field.field_key"
             type="date"
             v-model="model[field.field_key]"
+            :autocomplete="autocompleteFor(field.field_key)"
             :required="field.field_required"
             class="w-full text-xs bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-slate-900 focus:bg-white focus:ring-2 focus:ring-apc-gold focus:border-apc-gold outline-none transition-all"
           />
@@ -59,6 +64,8 @@
           <!-- Textarea Field -->
           <textarea
             v-else-if="field.field_type === 'textarea'"
+            :id="`field-${field.field_key}`"
+            :name="field.field_key"
             v-model="model[field.field_key]"
             :required="field.field_required"
             :placeholder="field.field_placeholder"
@@ -69,8 +76,13 @@
           <!-- Text/Email/Tel Input -->
           <input
             v-else
+            :id="`field-${field.field_key}`"
+            :name="field.field_key"
             :type="field.field_type || 'text'"
             v-model="model[field.field_key]"
+            :autocomplete="autocompleteFor(field.field_key)"
+            :spellcheck="field.field_type === 'email' ? 'false' : undefined"
+            :autocapitalize="field.field_type === 'email' ? 'none' : undefined"
             :required="field.field_required"
             :placeholder="field.field_placeholder"
             class="w-full text-xs bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-slate-900 focus:bg-white focus:ring-2 focus:ring-apc-gold focus:border-apc-gold outline-none transition-all"
@@ -86,6 +98,22 @@
 </template>
 
 <script setup>
+const AUTOCOMPLETE_MAP = {
+  first_name: 'given-name',
+  middle_name: 'additional-name',
+  last_name: 'family-name',
+  birth_date: 'bday',
+  email: 'email',
+  mobile: 'tel',
+  home_address: 'street-address',
+  city: 'address-level2',
+  nationality: 'country-name'
+};
+
+function autocompleteFor(key) {
+  return AUTOCOMPLETE_MAP[key] || 'off';
+}
+
 const props = defineProps({
   sections: {
     type: Array,

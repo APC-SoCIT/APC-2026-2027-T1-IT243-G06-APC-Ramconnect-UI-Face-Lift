@@ -33,3 +33,6 @@ venv/
 ENV/
 .env
 .env.local
+
+.vercel
+.env*

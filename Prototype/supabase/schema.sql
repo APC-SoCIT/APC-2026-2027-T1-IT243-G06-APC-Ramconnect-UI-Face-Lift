@@ -224,12 +224,48 @@ CREATE POLICY "Staff can update inquiries" ON public.inquiries FOR UPDATE TO aut
 CREATE POLICY "Staff can view inquiry notes" ON public.inquiry_notes FOR SELECT TO authenticated USING (true);
 CREATE POLICY "Staff can create inquiry notes" ON public.inquiry_notes FOR INSERT TO authenticated WITH CHECK (true);
 
--- Applications: Insert allowed, users see own, staff sees all
+-- Applications: Insert allowed, users see/update own, staff sees/updates all
 CREATE POLICY "Applicants can insert applications" ON public.applications FOR INSERT WITH CHECK (true);
 CREATE POLICY "Users can view their own application" ON public.applications FOR SELECT TO authenticated USING (auth.uid() = user_id);
+CREATE POLICY "Users can update own application" ON public.applications FOR UPDATE TO authenticated USING (auth.uid() = user_id);
+CREATE POLICY "Staff can view all applications" ON public.applications FOR SELECT TO authenticated USING (
+  EXISTS (SELECT 1 FROM public.users u WHERE u.id = auth.uid() AND u.role IN ('admission_officer', 'marketing_admin', 'registrar', 'itro_admin'))
+);
+CREATE POLICY "Staff can update all applications" ON public.applications FOR UPDATE TO authenticated USING (
+  EXISTS (SELECT 1 FROM public.users u WHERE u.id = auth.uid() AND u.role IN ('admission_officer', 'marketing_admin', 'registrar', 'itro_admin'))
+);
 
--- Users: Read own profile only
+-- Users: Read/insert own profile
 CREATE POLICY "Users can view own profile" ON public.users FOR SELECT TO authenticated USING (auth.uid() = id);
+CREATE POLICY "Users can insert own profile" ON public.users FOR INSERT TO authenticated WITH CHECK (auth.uid() = id);
+
+-- Sync new Supabase Auth signups into public.users
+CREATE OR REPLACE FUNCTION public.handle_new_auth_user()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  INSERT INTO public.users (id, email, full_name, role, password_hash)
+  VALUES (
+    NEW.id,
+    NEW.email,
+    COALESCE(NEW.raw_user_meta_data->>'full_name', split_part(NEW.email, '@', 1)),
+    COALESCE(NEW.raw_user_meta_data->>'role', 'applicant'),
+    'supabase_auth'
+  )
+  ON CONFLICT (email) DO UPDATE SET
+    full_name = EXCLUDED.full_name,
+    updated_at = NOW();
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_auth_user();
 
 -- Audit logs: Authenticated staff only
 CREATE POLICY "Staff can read audit logs" ON public.audit_logs FOR SELECT TO authenticated USING (true);

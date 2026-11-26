@@ -1,16 +1,35 @@
 import uuid
 from datetime import datetime
 from typing import List, Dict, Any, Optional
-from .config import SUPABASE_URL, SUPABASE_KEY
+from .config import SUPABASE_URL, SUPABASE_KEY, SUPABASE_SERVICE_ROLE_KEY
 
-# Initialize Supabase client if configured
+# Initialize Supabase clients if configured
 supabase = None
-if SUPABASE_URL and SUPABASE_KEY:
+supabase_admin = None
+if SUPABASE_URL and SUPABASE_KEY and "your-project-ref" not in SUPABASE_URL:
     try:
         from supabase import create_client
         supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+        if SUPABASE_SERVICE_ROLE_KEY:
+            supabase_admin = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
     except Exception as e:
         print(f"Supabase connection init notice: {e}")
+
+
+def get_supabase_db():
+    """Return service-role Supabase client when available, else anon client."""
+    return supabase_admin or supabase
+
+
+def create_anon_client():
+    """Create an isolated Supabase anon client so auth sign-in/up does not mutate shared headers."""
+    if SUPABASE_URL and SUPABASE_KEY and "your-project-ref" not in SUPABASE_URL:
+        try:
+            from supabase import create_client
+            return create_client(SUPABASE_URL, SUPABASE_KEY)
+        except Exception:
+            return None
+    return None
 
 # In-memory storage layer initialized with default APC seed data
 # Allows instant local development and offline preview

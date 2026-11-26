@@ -2,14 +2,27 @@ import uuid
 from fastapi import APIRouter, HTTPException, Depends, Header
 from typing import Optional
 from ..schemas import LoginRequest, RegisterRequest, UserResponse
-from ..database import DB, supabase
-from ..config import JWT_SECRET
+from ..database import DB, supabase, get_supabase_db, create_anon_client
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
+
 def create_mock_token(user_id: str, email: str, role: str) -> str:
-    # Lightweight token format: "user_id:role:email" or base64 token
     return f"token_{user_id}_{role}"
+
+
+def _lookup_public_user(email: str) -> Optional[dict]:
+    client = get_supabase_db()
+    if not client:
+        return None
+    try:
+        res = client.table("users").select("id, email, full_name, role").ilike("email", email).limit(1).execute()
+        if res.data:
+            return res.data[0]
+    except Exception:
+        pass
+    return None
+
 
 def get_current_user(authorization: Optional[str] = Header(None)) -> dict:
     if not authorization:
@@ -18,44 +31,59 @@ def get_current_user(authorization: Optional[str] = Header(None)) -> dict:
     if token.startswith("token_"):
         parts = token.split("_")
         if len(parts) >= 3:
-            u_id, role = parts[1], parts[2]
+            u_id, role = parts[1], "_".join(parts[2:])
             for u in DB["users"]:
                 if u["id"] == u_id:
                     return u
             return {"id": u_id, "role": role, "email": "user@apc.edu.ph", "full_name": "Authenticated User"}
-    # If using Supabase auth token
-    if supabase and authorization:
+    if supabase and token:
         try:
             res = supabase.auth.get_user(token)
             if res and res.user:
-                return {"id": res.user.id, "email": res.user.email, "role": "applicant", "full_name": res.user.email}
+                profile = _lookup_public_user(res.user.email)
+                meta = res.user.user_metadata or {}
+                return {
+                    "id": str(res.user.id),
+                    "email": res.user.email,
+                    "role": (profile or {}).get("role") or meta.get("role") or "applicant",
+                    "full_name": (profile or {}).get("full_name") or meta.get("full_name") or res.user.email,
+                }
         except Exception:
             pass
     raise HTTPException(status_code=401, detail="Invalid token")
 
+
 @router.post("/login", response_model=UserResponse)
 def login(req: LoginRequest):
-    # Try Supabase if configured
-    if supabase:
+    email_clean = req.email.strip()
+
+    # 1. Try Supabase Auth first using an isolated client
+    auth_client = create_anon_client()
+    if auth_client:
         try:
-            auth_res = supabase.auth.sign_in_with_password({"email": req.email, "password": req.password})
-            if auth_res.user:
-                role = "applicant"
-                if "apc.edu.ph" in req.email:
-                    role = "admission_officer"
+            auth_res = auth_client.auth.sign_in_with_password({"email": email_clean, "password": req.password})
+            if auth_res and auth_res.user and auth_res.session:
+                profile = _lookup_public_user(auth_res.user.email)
+                meta = auth_res.user.user_metadata or {}
+                role = (profile or {}).get("role") or meta.get("role") or (
+                    "admission_officer" if email_clean.lower().endswith("@apc.edu.ph") else "applicant"
+                )
+                full_name = (profile or {}).get("full_name") or meta.get("full_name") or email_clean.split("@")[0]
                 return UserResponse(
                     id=str(auth_res.user.id),
                     email=auth_res.user.email,
-                    full_name=auth_res.user.user_metadata.get("full_name", req.email.split("@")[0]),
+                    full_name=full_name,
                     role=role,
                     token=auth_res.session.access_token
                 )
-        except Exception:
-            pass
+        except Exception as e:
+            err_msg = str(e).lower()
+            if "email not confirmed" in err_msg:
+                raise HTTPException(status_code=403, detail="Email not confirmed. Check your inbox or configure SUPABASE_SERVICE_ROLE_KEY.")
 
-    # Check local DB
+    # 2. Check local seeded / fallback DB users
     for u in DB["users"]:
-        if u["email"].lower() == req.email.lower():
+        if u["email"].lower() == email_clean.lower():
             if u["password"] == req.password:
                 token = create_mock_token(u["id"], u["email"], u["role"])
                 return UserResponse(
@@ -65,43 +93,33 @@ def login(req: LoginRequest):
                     role=u["role"],
                     token=token
                 )
-            else:
-                raise HTTPException(status_code=400, detail="Invalid password")
-    
-    # Auto-allow demo admission login if apc.edu.ph email
-    if req.email.endswith("@apc.edu.ph"):
-        new_u = {
-            "id": f"u-{uuid.uuid4().hex[:8]}",
-            "email": req.email,
-            "full_name": req.email.split("@")[0].title() + " (Staff)",
-            "role": "admission_officer",
-            "password": req.password
-        }
-        DB["users"].append(new_u)
-        token = create_mock_token(new_u["id"], new_u["email"], new_u["role"])
-        return UserResponse(id=new_u["id"], email=new_u["email"], full_name=new_u["full_name"], role=new_u["role"], token=token)
+            raise HTTPException(status_code=401, detail="Invalid email or password.")
 
-    raise HTTPException(status_code=404, detail="User account not found. Please register first.")
+    raise HTTPException(status_code=401, detail="Invalid email or password.")
+
 
 @router.post("/register", response_model=UserResponse)
 def register(req: RegisterRequest):
-    # Check if duplicate email
+    email_clean = req.email.strip()
+    if _lookup_public_user(email_clean):
+        raise HTTPException(status_code=409, detail="An account with this email already exists.")
     for u in DB["users"]:
-        if u["email"].lower() == req.email.lower():
-            raise HTTPException(status_code=400, detail="An account with this email already exists.")
+        if u["email"].lower() == email_clean.lower():
+            raise HTTPException(status_code=409, detail="An account with this email already exists.")
 
     new_id = str(uuid.uuid4())
-    role = "admission_officer" if req.email.endswith("@apc.edu.ph") else "applicant"
+    role = "admission_officer" if email_clean.lower().endswith("@apc.edu.ph") else "applicant"
     new_user = {
         "id": new_id,
-        "email": req.email,
+        "email": email_clean,
         "full_name": req.full_name,
         "role": role,
         "password": req.password
     }
     DB["users"].append(new_user)
-    token = create_mock_token(new_id, req.email, role)
-    return UserResponse(id=new_id, email=req.email, full_name=req.full_name, role=role, token=token)
+    token = create_mock_token(new_id, email_clean, role)
+    return UserResponse(id=new_id, email=email_clean, full_name=req.full_name, role=role, token=token)
+
 
 @router.get("/me", response_model=UserResponse)
 def get_me(user: dict = Depends(get_current_user)):

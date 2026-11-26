@@ -26,7 +26,7 @@
         <nav class="hidden md:flex items-center space-x-6 text-sm font-medium">
           <router-link to="/" class="text-slate-200 hover:text-apc-gold transition-colors py-1">Home</router-link>
           <router-link to="/inquire" class="text-slate-200 hover:text-apc-gold transition-colors py-1">Inquire</router-link>
-          <router-link to="/apply" class="text-slate-200 hover:text-apc-gold transition-colors py-1">Apply Now</router-link>
+          <router-link :to="authStore.isApplicant ? '/portal' : '/apply'" class="text-slate-200 hover:text-apc-gold transition-colors py-1">Apply Now</router-link>
           
           <!-- Persistent link to main APC website (Resolves Appendix I Feedback) -->
           <a href="https://apc.edu.ph" target="_blank" rel="noopener noreferrer" class="text-slate-400 hover:text-white flex items-center space-x-1 text-xs border border-white/20 px-2.5 py-1 rounded-full hover:border-apc-gold transition-colors">
@@ -76,7 +76,7 @@
     <div v-if="mobileMenuOpen" class="md:hidden bg-apc-navyLight border-b border-white/10 px-4 pt-3 pb-5 space-y-3">
       <router-link @click="mobileMenuOpen = false" to="/" class="block text-slate-200 hover:text-apc-gold font-medium py-2">Home</router-link>
       <router-link @click="mobileMenuOpen = false" to="/inquire" class="block text-slate-200 hover:text-apc-gold font-medium py-2">Inquire</router-link>
-      <router-link @click="mobileMenuOpen = false" to="/apply" class="block text-slate-200 hover:text-apc-gold font-medium py-2">Apply Online</router-link>
+      <router-link @click="mobileMenuOpen = false" :to="authStore.isApplicant ? '/portal' : '/apply'" class="block text-slate-200 hover:text-apc-gold font-medium py-2">Apply Online</router-link>
       <a href="https://apc.edu.ph" target="_blank" class="flex items-center justify-between text-slate-400 py-2 border-t border-white/10 text-xs">
         <span>Visit Main Website (apc.edu.ph)</span>
         <ExternalLink class="w-3.5 h-3.5" />

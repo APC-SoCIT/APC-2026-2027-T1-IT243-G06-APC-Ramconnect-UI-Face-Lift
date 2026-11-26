@@ -6,7 +6,6 @@ import InquireView from '../views/InquireView.vue';
 import ApplyView from '../views/ApplyView.vue';
 import PortalView from '../views/PortalView.vue';
 import LoginView from '../views/LoginView.vue';
-import RegisterView from '../views/RegisterView.vue';
 
 import DashboardView from '../views/staff/DashboardView.vue';
 import ApplicantsView from '../views/staff/ApplicantsView.vue';
@@ -17,10 +16,10 @@ import DesignView from '../views/staff/DesignView.vue';
 const routes = [
   { path: '/', name: 'home', component: HomeView },
   { path: '/inquire', name: 'inquire', component: InquireView },
-  { path: '/apply', name: 'apply', component: ApplyView },
+  { path: '/apply', name: 'apply', component: ApplyView, meta: { blockAuthenticatedApplicant: true } },
   { path: '/portal', name: 'portal', component: PortalView, meta: { requiresAuth: true } },
-  { path: '/login', name: 'login', component: LoginView },
-  { path: '/register', name: 'register', component: RegisterView },
+  { path: '/login', name: 'login', component: LoginView, meta: { guestOnly: true } },
+  { path: '/register', redirect: '/apply' },
   
   // Staff CRM & CMS Hub
   { path: '/staff', name: 'staff-dashboard', component: DashboardView, meta: { requiresStaff: true } },
@@ -44,7 +43,17 @@ const router = createRouter({
 
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore();
-  
+
+  // Only one account can be logged in at the same time
+  if (to.meta.guestOnly && authStore.isAuthenticated) {
+    return next({ name: authStore.isStaff ? 'staff-dashboard' : 'portal' });
+  }
+
+  // Logged-in applicants cannot start a new application; route back to their dashboard
+  if (to.meta.blockAuthenticatedApplicant && authStore.isAuthenticated && authStore.isApplicant) {
+    return next({ name: 'portal' });
+  }
+
   if (to.meta.requiresStaff) {
     if (!authStore.isAuthenticated) {
       return next({ name: 'login', query: { redirect: to.fullPath } });
@@ -57,6 +66,9 @@ router.beforeEach((to, from, next) => {
   if (to.meta.requiresAuth) {
     if (!authStore.isAuthenticated) {
       return next({ name: 'login', query: { redirect: to.fullPath } });
+    }
+    if (authStore.isStaff) {
+      return next({ name: 'staff-dashboard' });
     }
   }
 

@@ -26,6 +26,32 @@
 
       <!-- Active Application Dashboard -->
       <div v-else class="space-y-6">
+        <!-- New Account Default Password Banner -->
+        <div
+          v-if="newAccountCreds"
+          role="status"
+          class="p-4 sm:p-5 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-start justify-between gap-4"
+        >
+          <div class="space-y-1 text-xs">
+            <h3 class="font-bold text-emerald-950 text-sm">Applicant Account Created</h3>
+            <p class="text-emerald-900">
+              Use these credentials next time you sign in to track your application:
+            </p>
+            <div class="flex flex-wrap gap-x-5 gap-y-1 pt-1 font-mono text-emerald-950">
+              <span><strong>Email:</strong> {{ newAccountCreds.email }}</span>
+              <span><strong>Default Password:</strong> {{ newAccountCreds.password }}</span>
+            </div>
+          </div>
+          <button
+            type="button"
+            @click="newAccountCreds = null"
+            aria-label="Dismiss account credentials notice"
+            class="text-emerald-700 hover:text-emerald-950 p-1 rounded-lg hover:bg-emerald-100 shrink-0"
+          >
+            <X class="w-4 h-4" />
+          </button>
+        </div>
+
         <!-- Header Card -->
         <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 apc-card-shadow flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
@@ -188,7 +214,7 @@ import Navbar from '../components/common/Navbar.vue';
 import Footer from '../components/common/Footer.vue';
 import StatusBadge from '../components/common/StatusBadge.vue';
 import PaymentModal from '../components/applicant/PaymentModal.vue';
-import { FileQuestion, ArrowRight, CreditCard, Bell, Award } from 'lucide-vue-next';
+import { FileQuestion, ArrowRight, CreditCard, Bell, Award, X } from 'lucide-vue-next';
 
 const route = useRoute();
 const authStore = useAuthStore();
@@ -196,8 +222,16 @@ const authStore = useAuthStore();
 const application = ref(null);
 const isLoading = ref(true);
 const showPaymentModal = ref(false);
+const newAccountCreds = ref(null);
 
 onMounted(async () => {
+  const savedCreds = sessionStorage.getItem('apc_new_applicant_creds');
+  if (savedCreds) {
+    try {
+      newAccountCreds.value = JSON.parse(savedCreds);
+    } catch (e) {}
+    sessionStorage.removeItem('apc_new_applicant_creds');
+  }
   await loadApplication();
 });
 

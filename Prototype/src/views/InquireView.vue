@@ -41,8 +41,8 @@
         </div>
 
         <div class="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4">
-          <router-link to="/apply" class="w-full sm:w-auto bg-apc-gold hover:bg-apc-goldDark text-apc-navy font-bold text-xs px-6 py-3 rounded-xl shadow transition-colors">
-            Proceed to Online Application
+          <router-link :to="authStore.isApplicant ? '/portal' : '/apply'" class="w-full sm:w-auto bg-apc-gold hover:bg-apc-goldDark text-apc-navy font-bold text-xs px-6 py-3 rounded-xl shadow transition-colors">
+            {{ authStore.isApplicant ? 'Go to My Dashboard' : 'Proceed to Online Application' }}
           </router-link>
           <button @click="resetForm" class="w-full sm:w-auto border border-slate-300 text-slate-700 hover:bg-slate-100 font-semibold text-xs px-6 py-3 rounded-xl transition-colors">
             Submit Another Inquiry
@@ -201,12 +201,14 @@
 <script setup>
 import { reactive, ref, onMounted } from 'vue';
 import { useSiteSettingsStore } from '../stores/siteSettings';
+import { useAuthStore } from '../stores/auth';
 import { api } from '../api/client';
 import Navbar from '../components/common/Navbar.vue';
 import Footer from '../components/common/Footer.vue';
 import { CheckCircle2, Send } from 'lucide-vue-next';
 
 const siteStore = useSiteSettingsStore();
+const authStore = useAuthStore();
 const isSubmitting = ref(false);
 const submittedRef = ref(null);
 const privacyConsent = ref(false);
